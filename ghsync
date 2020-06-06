@@ -1,0 +1,169 @@
+#!/usr/bin/env bash
+
+GH_ADDRESS="https://github.com/"
+ARGV0=$0
+dir=`pwd`
+
+function helptext {
+    echo "github synchronisation tool"
+    echo ""
+    echo "This tool is designed to keep a directory up to date with a remote"
+    echo "github organisation or user. It will clone new repositories as they"
+    echo "are added."
+}
+
+function init-file {
+    echo -n "{ \"type\": \"$1\", \"base\": \"$2\", \"origin\": \"$3\", \"ignored\": []}" >.ghsync
+}
+
+function good {
+    echo -e "\e[1;32mExists:\e[0m $*"
+}
+
+function ignore {
+    echo -e "\e[1;37mIgnored:\e[0m $*"
+}
+
+function working {
+    echo -e "\e[1;33mSyncing:\e[0m $*"
+}
+
+function error {
+    echo -e "\e[1;31mError:\e[0m $*"
+}
+
+function is_ignored {
+    search=$1
+    shift
+    result=`echo $* | jq ".ignored | index(\"$search\")"`
+    echo -n $result
+}
+
+function sync {
+    base=`echo "$*" | jq -r .base`
+    type=`echo "$*" | jq -r .type`
+    origin=`echo "$*" | jq -r .origin`
+
+    echo "Synchronising: $base"
+    REPOS=`hub api "$type/$base/repos?per_page=100" --paginate | jq -r '.[] | .name'`
+    for i in $REPOS;
+    do
+        ignored=$(is_ignored $i $*)
+        if [ "$ignored" != "null" ]; then
+            ignore "$i"
+        elif [ -d $i ]; then
+            good "$i"
+        else
+            working "$i"
+            git clone -o $origin $GH_ADDRESS$base/$i $i
+            if [ -x "$(command -v gr)" ]; then
+                gr tag add $base $i
+            fi
+        fi
+    done
+}
+
+PARAMS=""
+
+while (( "$#" )); do
+  case "$1" in
+    -h|--help)
+      helptext
+      exit 0
+      ;;
+    -a|--all)
+      for i in `fd -Hp "\.ghsync"`; do
+          $ARGV0 --dir `dirname $i`
+      done
+      exit 0
+      ;;
+    --dir)
+      if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+        dir=$2
+        shift 2
+      else
+        error "Argument for $1 is missing" >&2
+        exit 1
+      fi
+      ;;
+    -d|--address)
+      if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+        GH_ADDRESS=$2
+        shift 2
+      else
+        error "Argument for $1 is missing" >&2
+        exit 1
+      fi
+      ;;
+    -s|--init-self)
+      if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+        init-file "users" $2 "origin"
+        exit 0
+      else
+        error "Argument for $1 is missing" >&2
+        exit 1
+      fi
+      ;;
+    -u|--init-user)
+      if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+        init-file "users" $2 "upstream"
+        exit 0
+      else
+        error "Argument for $1 is missing" >&2
+        exit 1
+      fi
+      ;;
+    -o|--init-org)
+      if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+        init-file "orgs" $2 "upstream"
+        exit 0
+      else
+        error "Argument for $1 is missing" >&2
+        exit 1
+      fi
+      ;;
+    -r|--rawsync)
+      if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+        sync $2
+        exit 0
+      else
+        error "Argument for $1 is missing" >&2
+        exit 1
+      fi
+      ;;
+    -*|--*=) # unsupported flags
+      error "Error: Unsupported flag $1"
+      helptext
+      exit 1
+      ;;
+    *) # preserve positional arguments
+      PARAMS="$PARAMS $1"
+      shift
+      ;;
+  esac
+done
+
+
+if [ -d $dir ]; then
+    cd $dir
+else
+    error "Directory ($dir) specified is not a directory"
+    exit 1
+fi
+
+if [ -f .ghsync ]; then
+    filecontents=`cat .ghsync`
+    sync $filecontents
+else
+    error "No .ghsync file found for this directory."
+    echo "You can generate a new one with the --init-* commands below."
+    echo ""
+    echo "For your own repositories:"
+    echo "    ghsync --init-self username"
+    echo "For other users or orgs:"
+    echo "    ghsync --init-org organisation"
+    echo "    ghsync --init-user username"
+    echo ""
+    echo "Run $ARGV0 --help for more help"
+    exit 1
+fi

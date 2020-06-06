@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+exec ps -f -p `pgrep -f $1`
