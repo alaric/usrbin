@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e 
+
 GH_ADDRESS="https://github.com/"
 ARGV0=$0
 dir=`pwd`
@@ -10,6 +12,14 @@ function helptext {
     echo "This tool is designed to keep a directory up to date with a remote"
     echo "github organisation or user. It will clone new repositories as they"
     echo "are added."
+    echo ""
+    echo "Options:"
+    echo "   --help                  Print this help text"
+    echo "   --init-self|-s <name>   Initialise .ghsync for your own repos"
+    echo "   --init-user|-u <name>   Initialise .ghsync for a user's"
+    echo "   --init-org|-o <name>    Initialise .ghsync for an org's"
+    echo "   --address|-d <address>  Override the git clone location"
+    echo "   --all|-a                Find all .ghsync and run on them"
 }
 
 function init-file {
