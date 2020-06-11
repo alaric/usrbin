@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -e
+
+if [ $# -ne 0 ]; then
+    sleep $1;
+fi
+
+mkdir ~/.logs 2>/dev/null || true
+echo "-------------------------------------------------------" >>~/.logs/tasksync.log
+echo "`date -Ins`: Starting execution" >>~/.logs/tasksync.log
+lockdir=/tmp/tasksync.lock
+if mkdir "$lockdir" 2>/dev/null; then
+    # Remove when finishes
+    trap 'rm -rf "$lockdir"' 0
+    cd ~/.task
+    git commit -m "Hook Commit of task data" *.data 2>&1 >>~/.logs/tasksync.log
+    git pull 2>&1 >>~/.logs/tasksync.log
+    git push 2>&1 >>~/.logs/tasksync.log
+else
+    echo "Deferred execution for 1 minute"
+    echo "`date -Ins`: Deferred execution for 1 minute" >>~/.logs/tasksync.log
+    $0 60 >>~/.logs/tasksync.log
+    exit 0
+fi
