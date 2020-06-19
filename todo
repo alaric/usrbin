@@ -1,0 +1,1 @@
+nvim -c ":TW" -c "colo PaperColor" -c "map <buffer>q :qa<cr>"
