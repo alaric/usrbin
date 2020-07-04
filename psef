@@ -1,2 +1,7 @@
 #!/usr/bin/env bash
-exec ps -f -p `pgrep -f $1`
+pids=`pgrep -f $1`
+if [ -z "$pids" ]; then
+    echo "No processes match"
+else
+    exec ps -f -p $pids
+fi
