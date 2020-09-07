@@ -69,6 +69,9 @@ function sync {
             if [ -x "$(command -v gr)" ]; then
                 gr tag add $base $i
             fi
+            if [ -x "$(command -v dirmux)" ]; then
+                dirmux tag add $base
+            fi
         fi
     done
 }
