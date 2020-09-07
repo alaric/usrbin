@@ -70,7 +70,7 @@ function sync {
                 gr tag add $base $i
             fi
             if [ -x "$(command -v dirmux)" ]; then
-                dirmux tag add $base $i
+                dirmux tag add $base $(realpath $i)
             fi
         fi
     done
