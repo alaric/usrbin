@@ -2,7 +2,7 @@
 
 set -e 
 
-GH_ADDRESS="https://github.com/"
+GH_ADDRESS=${GHSYNC_GH_ADDR:-"https://github.com/"}
 ARGV0=$0
 dir=`pwd`
 
@@ -70,7 +70,7 @@ function sync {
                 gr tag add $base $i
             fi
             if [ -x "$(command -v dirmux)" ]; then
-                dirmux tag add $base
+                dirmux tag add $base $i
             fi
         fi
     done
